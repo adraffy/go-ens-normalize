@@ -3,7 +3,7 @@ package ensip15
 import (
 	"fmt"
 
-	"github.com/adraffy/go-ensnormalize/decoder"
+	"github.com/adraffy/ENSNormalize.go/util"
 )
 
 const (
@@ -16,25 +16,16 @@ type EmojiSequence struct {
 	beautified []rune
 }
 
-func NewEmojiSequence(cps []rune) EmojiSequence {
-	v := make([]rune, 0, len(cps))
-	for _, x := range cps {
-		if x != FE0F {
-			v = append(v, x)
-		}
-	}
-	if len(v) == len(cps) {
-		v = cps
-	}
-	return EmojiSequence{
-		normalized: v,
-		beautified: cps,
-	}
+func (seq EmojiSequence) Normalized() string {
+	return string(seq.normalized)
+}
+func (seq EmojiSequence) Beautified() string {
+	return string(seq.beautified)
 }
 
 func (seq EmojiSequence) String() string {
 	return fmt.Sprint(seq.beautified)
-	//return string(seq.beautified)
+	//return seq.Beautified()
 }
 func (seq EmojiSequence) IsMangled() bool {
 	return len(seq.normalized) < len(seq.beautified)
@@ -48,38 +39,52 @@ func (seq EmojiSequence) HasZWJ() bool {
 	return false
 }
 
-func decodeEmojis(d *decoder.Decoder, path []rune) (v []EmojiSequence) {
+func decodeEmojis(d *util.Decoder, prev []rune) (v []EmojiSequence) {
 	for _, cp := range d.ReadSortedAscending(d.ReadUnsigned()) {
-		v = append(v, NewEmojiSequence(append(path, rune(cp))))
+		beautified := make([]rune, 0, len(prev)+1)
+		beautified = append(beautified, prev...)
+		beautified = append(beautified, rune(cp))
+		normalized := make([]rune, 0, len(beautified))
+		for _, x := range beautified {
+			if x != FE0F {
+				normalized = append(normalized, x)
+			}
+		}
+		if len(normalized) == len(beautified) {
+			normalized = beautified
+		}
+		v = append(v, EmojiSequence{
+			normalized,
+			beautified,
+		})
 	}
 	for _, cp := range d.ReadSortedAscending(d.ReadUnsigned()) {
-		v = append(v, decodeEmojis(d, append(path, rune(cp)))...)
+		v = append(v, decodeEmojis(d, append(prev, rune(cp)))...)
 	}
 	return v
 }
 
 type EmojiNode struct {
-	emoji    EmojiSequence
-	children map[rune]EmojiNode
+	emoji    *EmojiSequence
+	children map[rune]*EmojiNode
 }
 
-func (node *EmojiNode) Child(cp rune) EmojiNode {
+func (node *EmojiNode) Child(cp rune) *EmojiNode {
 	if node.children == nil {
-		node.children = make(map[rune]EmojiNode)
+		node.children = make(map[rune]*EmojiNode)
 	}
 	child, ok := node.children[cp]
 	if !ok {
-		child = EmojiNode{}
+		child = &EmojiNode{}
 		node.children[cp] = child
 	}
 	return child
 }
 
-func makeEmojiTree(v []EmojiSequence) EmojiNode {
-	root := EmojiNode{}
-	for _, emoji := range v {
-		var v []EmojiNode
-		v = append(v, root)
+func makeEmojiTree(all []EmojiSequence) *EmojiNode {
+	root := &EmojiNode{}
+	for _, emoji := range all {
+		v := []*EmojiNode{root}
 		for _, cp := range emoji.beautified {
 			if cp == FE0F {
 				for _, node := range v {
@@ -92,8 +97,28 @@ func makeEmojiTree(v []EmojiSequence) EmojiNode {
 			}
 		}
 		for _, node := range v {
-			node.emoji = emoji
+			node.emoji = &emoji
 		}
 	}
 	return root
+}
+
+func (l *ENSIP15) ParseEmojiAt(cps []rune, pos int) (emoji *EmojiSequence, end int) {
+	end = -1
+	node := l.emojiRoot
+	for pos < len(cps) {
+		if node.children == nil {
+			break
+		}
+		node = node.children[cps[pos]]
+		if node == nil {
+			break
+		}
+		pos += 1
+		if node.emoji != nil {
+			emoji = node.emoji
+			end = pos
+		}
+	}
+	return emoji, end
 }

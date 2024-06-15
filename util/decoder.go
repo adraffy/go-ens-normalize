@@ -1,10 +1,8 @@
-package decoder
+package util
 
 import (
 	"fmt"
 	"sort"
-
-	"github.com/adraffy/go-ensnormalize/common"
 )
 
 type Decoder struct {
@@ -23,7 +21,7 @@ func asSigned(i int) int {
 	}
 }
 
-func New(v []byte) *Decoder {
+func NewDecoder(v []byte) *Decoder {
 	var d = &Decoder{}
 	d.buf = v
 	d.magic = d.readMagic()
@@ -79,18 +77,18 @@ func (d *Decoder) readBinary(w int) int {
 	return x
 }
 
-func (self *Decoder) ReadUnsigned() int {
+func (d *Decoder) ReadUnsigned() int {
 	a := 0
 	var w int
 	for i := 0; ; i++ {
-		w = self.magic[i]
+		w = d.magic[i]
 		n := 1 << w
-		if i+1 == len(self.magic) || !self.readBit() {
+		if i+1 == len(d.magic) || !d.readBit() {
 			break
 		}
 		a += n
 	}
-	return a + self.readBinary(w)
+	return a + d.readBinary(w)
 }
 
 func (d *Decoder) readArray(n int, fn func(prev, x int) int) []int {
@@ -112,7 +110,12 @@ func (d *Decoder) ReadUnsortedDeltas(n int) []int {
 }
 
 func (d *Decoder) ReadString() string {
-	return string(common.RunesFromInts(d.ReadUnsortedDeltas(d.ReadUnsigned())))
+	v := d.ReadUnsortedDeltas(d.ReadUnsigned())
+	cps := make([]rune, len(v))
+	for i, x := range v {
+		cps[i] = rune(x)
+	}
+	return string(cps)
 }
 
 func (d *Decoder) ReadUnique() []int {
@@ -122,7 +125,7 @@ func (d *Decoder) ReadUnique() []int {
 		vX := d.ReadSortedAscending(n)
 		vS := d.ReadUnsortedDeltas(n)
 		for i := 0; i < n; i++ {
-			for x := vX[i]; x < vX[i]+vS[i]; x++ {
+			for x, e := vX[i], vX[i]+vS[i]; x < e; x++ {
 				v = append(v, x)
 			}
 		}
@@ -134,8 +137,4 @@ func (d *Decoder) ReadSortedUnique() []int {
 	v := d.ReadUnique()
 	sort.Ints(v)
 	return v
-}
-
-func (d *Decoder) ReadUniqueRuneSet() common.RuneSet {
-	return common.RuneSetFromInts(d.ReadUnique())
 }

@@ -2,13 +2,11 @@ package ensip15
 
 import (
 	_ "embed"
-	"slices"
+	"fmt"
 	"sort"
-	"sync"
 
-	"github.com/adraffy/go-ensnormalize/common"
-	"github.com/adraffy/go-ensnormalize/decoder"
-	"github.com/adraffy/go-ensnormalize/nf"
+	"github.com/adraffy/ENSNormalize.go/nf"
+	"github.com/adraffy/ENSNormalize.go/util"
 )
 
 //go:embed spec.bin
@@ -16,38 +14,28 @@ var compressed []byte
 
 type ENSIP15 struct {
 	nf                   *nf.NF
-	shouldEscape         common.RuneSet
-	ignored              common.RuneSet
-	combiningMarks       common.RuneSet
-	nonSpacingMarks      common.RuneSet
+	shouldEscape         util.RuneSet
+	ignored              util.RuneSet
+	combiningMarks       util.RuneSet
+	nonSpacingMarks      util.RuneSet
 	maxNonSpacingMarks   int
-	nfcCheck             common.RuneSet
+	nfcCheck             util.RuneSet
 	fenced               map[rune]string
 	mapped               map[rune][]rune
 	groups               []*Group
 	emojis               []EmojiSequence
-	emojiRoot            EmojiNode
-	possiblyValid        common.RuneSet
+	emojiRoot            *EmojiNode
+	possiblyValid        util.RuneSet
 	wholes               []Whole
 	confusables          map[rune]Whole
-	uniqueNonConfusables common.RuneSet
+	uniqueNonConfusables util.RuneSet
 	_LATIN               *Group
 	_GREEK               *Group
 	_ASCII               *Group
 	_EMOJI               *Group
 }
 
-var instance *ENSIP15
-var once sync.Once
-
-func GetInstance() *ENSIP15 {
-	once.Do(func() {
-		instance = New()
-	})
-	return instance
-}
-
-func decodeNamedCodepoints(d *decoder.Decoder) map[rune]string {
+func decodeNamedCodepoints(d *util.Decoder) map[rune]string {
 	ret := make(map[rune]string)
 	for _, cp := range d.ReadSortedAscending(d.ReadUnsigned()) {
 		ret[rune(cp)] = d.ReadString()
@@ -55,7 +43,7 @@ func decodeNamedCodepoints(d *decoder.Decoder) map[rune]string {
 	return ret
 }
 
-func decodeMapped(d *decoder.Decoder) map[rune][]rune {
+func decodeMapped(d *util.Decoder) map[rune][]rune {
 	ret := make(map[rune][]rune)
 	for {
 		w := d.ReadUnsigned()
@@ -82,15 +70,15 @@ func decodeMapped(d *decoder.Decoder) map[rune][]rune {
 }
 
 func New() *ENSIP15 {
-	d := decoder.New(compressed)
+	d := util.NewDecoder(compressed)
 	l := ENSIP15{}
 	l.nf = nf.New()
-	l.shouldEscape = d.ReadUniqueRuneSet()
-	l.ignored = d.ReadUniqueRuneSet()
-	l.combiningMarks = d.ReadUniqueRuneSet()
+	l.shouldEscape = util.NewRuneSetFromInts(d.ReadUnique())
+	l.ignored = util.NewRuneSetFromInts(d.ReadUnique())
+	l.combiningMarks = util.NewRuneSetFromInts(d.ReadUnique())
 	l.maxNonSpacingMarks = d.ReadUnsigned()
-	l.nonSpacingMarks = d.ReadUniqueRuneSet()
-	l.nfcCheck = d.ReadUniqueRuneSet()
+	l.nonSpacingMarks = util.NewRuneSetFromInts(d.ReadUnique())
+	l.nfcCheck = util.NewRuneSetFromInts(d.ReadUnique())
 	l.fenced = decodeNamedCodepoints(d)
 	l.mapped = decodeMapped(d)
 	l.groups = decodeGroups(d)
@@ -98,7 +86,7 @@ func New() *ENSIP15 {
 	l.wholes, l.confusables = decodeWholes(d, l.groups)
 
 	sort.Slice(l.emojis, func(i, j int) bool {
-		return common.CompareRunes(l.emojis[i].normalized, l.emojis[j].normalized) < 0
+		return compareRunes(l.emojis[i].normalized, l.emojis[j].normalized) < 0
 	})
 
 	l.emojiRoot = makeEmojiTree(l.emojis)
@@ -122,7 +110,7 @@ func New() *ENSIP15 {
 			possiblyValid[cp] = true
 		}
 	}
-	l.possiblyValid = common.RuneSetFromKeys(possiblyValid)
+	l.possiblyValid = util.NewRuneSetFromKeys(possiblyValid)
 
 	for cp := range multi {
 		delete(union, cp)
@@ -130,7 +118,7 @@ func New() *ENSIP15 {
 	for cp := range l.confusables {
 		delete(union, cp)
 	}
-	l.uniqueNonConfusables = common.RuneSetFromKeys(union)
+	l.uniqueNonConfusables = util.NewRuneSetFromKeys(union)
 
 	// direct group references
 	l._LATIN = l.FindGroup("Latin")
@@ -141,42 +129,195 @@ func New() *ENSIP15 {
 		name:          "ASCII",
 		cmWhitelisted: false,
 		primary:       l.possiblyValid.Filter(func(cp rune) bool { return cp < 0x80 }),
-		secondary:     common.RuneSet{},
+		secondary:     util.RuneSet{},
 	}
 	l._EMOJI = &Group{
 		index:         -1,
 		restricted:    false,
 		cmWhitelisted: false,
-		primary:       common.RuneSet{},
-		secondary:     common.RuneSet{},
+		primary:       util.RuneSet{},
+		secondary:     util.RuneSet{},
 	}
 	return &l
 }
 
-func (l *ENSIP15) FindGroup(name string) *Group {
-	i := slices.IndexFunc(l.groups, func(g *Group) bool {
-		return g.name == name
-	})
-	return l.groups[i]
-}
-
 func (l *ENSIP15) Normalize(name string) (string, error) {
-	return "yo", nil
+	return l.transform(
+		name,
+		l.nf.NFC,
+		func(e EmojiSequence) []rune { return e.normalized },
+		func(tokens []OutputToken) (string, error) {
+			cps := FlattenTokens(tokens)
+			_, err := l.checkValidLabel(cps, tokens)
+			if err != nil {
+				return "", err
+			}
+			return string(cps), nil
+		},
+	)
 }
 
-func (l *ENSIP15) ShouldEscape() common.RuneSet {
-	return l.shouldEscape
+func (l *ENSIP15) Beautify(name string) (string, error) {
+	return l.transform(
+		name,
+		l.nf.NFC,
+		func(e EmojiSequence) []rune { return e.beautified },
+		func(tokens []OutputToken) (string, error) {
+			cps := FlattenTokens(tokens)
+			_, err := l.checkValidLabel(cps, tokens)
+			if err != nil {
+				return "", nil
+			}
+			return string(cps), nil
+		},
+	)
 }
 
-func (l *ENSIP15) Emojis() (v []EmojiSequence) {
-	v = make([]EmojiSequence, len(l.emojis))
-	copy(v, l.emojis)
-	return v
+func (l *ENSIP15) NormalizeFragment(frag string, decompose bool) (string, error) {
+	nf := l.nf.NFC
+	if decompose {
+		nf = l.nf.NFD
+	}
+	return l.transform(
+		frag,
+		nf,
+		func(e EmojiSequence) []rune { return e.normalized },
+		func(tokens []OutputToken) (string, error) {
+			return string(FlattenTokens(tokens)), nil
+		},
+	)
 }
 
-func (l *ENSIP15) GroupASCII() *Group {
-	return l._ASCII
+func (l *ENSIP15) transform(
+	name string,
+	nf func([]rune) []rune,
+	ef func(EmojiSequence) []rune,
+	normalizer func(tokens []OutputToken) (string, error),
+) (string, error) {
+	labels := Split(name)
+	for i, label := range labels {
+		cps := []rune(label)
+		tokens, err := l.outputTokenize(cps, nf, ef)
+		if err == nil {
+			var norm string
+			norm, err = normalizer(tokens)
+			if err == nil {
+				labels[i] = norm
+				continue
+			}
+		}
+		if len(labels) > 0 {
+			err = fmt.Errorf("invalid label \"%s\": %w", l.SafeImplode(cps), err)
+		}
+		return "", err
+	}
+	return Join(labels), nil
 }
-func (l *ENSIP15) GroupEmoji() *Group {
-	return l._EMOJI
+
+func checkLeadingUnderscore(cps []rune) error {
+	const UNDERSCORE = 0x5F
+	allowed := true
+	for _, cp := range cps {
+		if allowed {
+			if cp != UNDERSCORE {
+				allowed = false
+			}
+		} else {
+			if cp == UNDERSCORE {
+				return ErrLeadingUnderscore
+			}
+		}
+	}
+	return nil
+}
+
+func checkLabelExtension(cps []rune) error {
+	const HYPHEN = 0x2D
+	if len(cps) >= 4 && cps[2] == HYPHEN && cps[3] == HYPHEN {
+		return fmt.Errorf("%w: %s", ErrInvalidLabelExtension, string(cps[:4]))
+	}
+	return nil
+}
+
+func (l *ENSIP15) checkCombiningMarks(tokens []OutputToken) error {
+	for i, x := range tokens {
+		if x.Emoji == nil {
+			cp := x.Codepoints[0]
+			if l.combiningMarks.Contains(cp) {
+				if i == 0 {
+					return fmt.Errorf("%v: %s", ErrCMLeading, l.SafeCodepoint(cp))
+				} else {
+					return fmt.Errorf("%v: %s + %s", ErrCMAfterEmoji, tokens[i-1].Emoji.Beautified(), l.SafeCodepoint(cp))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (l *ENSIP15) checkFenced(cps []rune) error {
+	name, ok := l.fenced[cps[0]]
+	if ok {
+		return fmt.Errorf("%w: %s", ErrFencedLeading, name)
+	}
+	n := len(cps)
+	lastPos := -1
+	var lastName string
+	for i := 1; i < n; i++ {
+		name, ok := l.fenced[cps[i]]
+		if ok {
+			if lastPos == i {
+				return fmt.Errorf("%w: %s + %s", ErrFencedAdjacent, lastName, name)
+			}
+			lastPos = i + 1
+			lastName = name
+		}
+	}
+	if lastPos == n {
+		return fmt.Errorf("%w: %s", ErrFencedTrailing, lastName)
+	}
+	return nil
+}
+
+func (l *ENSIP15) checkValidLabel(cps []rune, tokens []OutputToken) (*Group, error) {
+	if len(cps) == 0 {
+		return nil, ErrEmptyLabel
+	}
+	if err := checkLeadingUnderscore(cps); err != nil {
+		return nil, err
+	}
+	hasEmoji := len(tokens) > 1 || tokens[0].Emoji != nil
+	if !hasEmoji && isASCII(cps) {
+		if err := checkLabelExtension(cps); err != nil {
+			return nil, err
+		}
+		return l._ASCII, nil
+	}
+	chars := make([]rune, 0, len(cps))
+	for _, t := range tokens {
+		if t.Emoji == nil {
+			chars = append(chars, t.Codepoints...)
+		}
+	}
+	if hasEmoji && len(chars) == 0 {
+		return l._EMOJI, nil
+	}
+	if err := l.checkCombiningMarks(tokens); err != nil {
+		return nil, err
+	}
+	if err := l.checkFenced(cps); err != nil {
+		return nil, err
+	}
+	unique := uniqueRunes(chars)
+	group, err := l.determineGroup(unique)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.checkGroup(group, chars); err != nil {
+		return nil, err
+	}
+	if err := l.checkWhole(group, unique); err != nil {
+		return nil, err
+	}
+	return group, nil
 }

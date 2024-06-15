@@ -1,3 +1,3 @@
-module github.com/adraffy/go-ensnormalize
+module github.com/adraffy/ENSNormalize.go
 
 go 1.22.4

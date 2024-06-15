@@ -1,11 +1,9 @@
 package nf
 
 import (
-	//"fmt"
 	_ "embed"
 
-	"github.com/adraffy/go-ensnormalize/common"
-	"github.com/adraffy/go-ensnormalize/decoder"
+	"github.com/adraffy/ENSNormalize.go/util"
 )
 
 //go:embed nf.bin
@@ -45,24 +43,19 @@ func unpackCP(packed rune) rune {
 
 type NF struct {
 	unicodeVersion string
-	exclusions     common.RuneSet
-	quickCheck     common.RuneSet
+	exclusions     util.RuneSet
+	quickCheck     util.RuneSet
 	decomps        map[rune][]rune
 	recomps        map[rune]map[rune]rune
 	ranks          map[rune]byte
 }
 
-// func (self *NF) Dump() {
-// 	fmt.Prrunef("Version: %s\n", self.unicodeVersion)
-// 	fmt.Prruneln(self.quickCheck)
-// }
-
 func New() *NF {
-	d := decoder.New(compressed)
+	d := util.NewDecoder(compressed)
 	self := &NF{}
 	self.unicodeVersion = d.ReadString()
-	self.exclusions = d.ReadUniqueRuneSet()
-	self.quickCheck = d.ReadUniqueRuneSet()
+	self.exclusions = util.NewRuneSetFromInts(d.ReadUnique())
+	self.quickCheck = util.NewRuneSetFromInts(d.ReadUnique())
 	self.decomps = make(map[rune][]rune)
 	self.recomps = make(map[rune]map[rune]rune)
 	self.ranks = make(map[rune]byte)
