@@ -52,7 +52,7 @@ type NF struct {
 
 func New() *NF {
 	d := util.NewDecoder(compressed)
-	self := &NF{}
+	self := NF{}
 	self.unicodeVersion = d.ReadString()
 	self.exclusions = util.NewRuneSetFromInts(d.ReadUnique())
 	self.quickCheck = util.NewRuneSetFromInts(d.ReadUnique())
@@ -92,7 +92,7 @@ func New() *NF {
 		}
 	}
 	d.AssertEOF()
-	return self
+	return &self
 }
 
 func (nf *NF) composePair(a, b rune) rune {

@@ -84,6 +84,7 @@ func New() *ENSIP15 {
 	l.groups = decodeGroups(d)
 	l.emojis = decodeEmojis(d, nil)
 	l.wholes, l.confusables = decodeWholes(d, l.groups)
+	d.AssertEOF()
 
 	sort.Slice(l.emojis, func(i, j int) bool {
 		return compareRunes(l.emojis[i].normalized, l.emojis[j].normalized) < 0
@@ -161,9 +162,17 @@ func (l *ENSIP15) Beautify(name string) (string, error) {
 		func(e EmojiSequence) []rune { return e.beautified },
 		func(tokens []OutputToken) (string, error) {
 			cps := FlattenTokens(tokens)
-			_, err := l.checkValidLabel(cps, tokens)
+			g, err := l.checkValidLabel(cps, tokens)
 			if err != nil {
 				return "", nil
+			}
+			if g != l._GREEK {
+				for i, x := range cps {
+					// ξ => Ξ if not greek
+					if x == 0x3BE {
+						cps[i] = 0x39E
+					}
+				}
 			}
 			return string(cps), nil
 		},
