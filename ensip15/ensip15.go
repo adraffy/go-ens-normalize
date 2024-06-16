@@ -95,7 +95,7 @@ func New() *ENSIP15 {
 	multi := make(map[rune]bool)
 	for _, g := range l.groups {
 		for _, cp := range append(g.primary.ToArray(), g.secondary.ToArray()...) {
-			if _, ok := union[cp]; ok {
+			if union[cp] {
 				multi[cp] = true
 			} else {
 				union[cp] = true
@@ -129,14 +129,11 @@ func New() *ENSIP15 {
 		name:          "ASCII",
 		cmWhitelisted: false,
 		primary:       l.possiblyValid.Filter(func(cp rune) bool { return cp < 0x80 }),
-		secondary:     util.RuneSet{},
 	}
 	l._EMOJI = &Group{
 		index:         -1,
 		restricted:    false,
 		cmWhitelisted: false,
-		primary:       util.RuneSet{},
-		secondary:     util.RuneSet{},
 	}
 	return &l
 }

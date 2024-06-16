@@ -1,8 +1,6 @@
 package ensip15
 
 import (
-	"fmt"
-
 	"github.com/adraffy/ENSNormalize.go/util"
 )
 
@@ -22,10 +20,8 @@ func (seq EmojiSequence) Normalized() string {
 func (seq EmojiSequence) Beautified() string {
 	return string(seq.beautified)
 }
-
 func (seq EmojiSequence) String() string {
-	return fmt.Sprint(seq.beautified)
-	//return seq.Beautified()
+	return seq.Beautified()
 }
 func (seq EmojiSequence) IsMangled() bool {
 	return len(seq.normalized) < len(seq.beautified)
@@ -114,7 +110,7 @@ func (l *ENSIP15) ParseEmojiAt(cps []rune, pos int) (emoji *EmojiSequence, end i
 		if node == nil {
 			break
 		}
-		pos += 1
+		pos++
 		if node.emoji != nil {
 			emoji = node.emoji
 			end = pos

@@ -51,7 +51,7 @@ func (d *Decoder) readMagic() []int {
 func (d *Decoder) readBit() bool {
 	if d.bit == 0 {
 		d.word = d.buf[d.pos]
-		d.pos += 1
+		d.pos++
 		d.bit = 1
 	}
 	bit := (d.word & d.bit) != 0
