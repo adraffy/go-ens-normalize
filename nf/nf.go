@@ -138,13 +138,11 @@ func (p *Packer) fixOrder() {
 		}
 		j := i - 1
 		for {
-			temp := v[j]
-			v[j] = v[j+1]
-			v[j+1] = temp
+			v[j+1], v[j] = v[j], v[j+1]
 			if j == 0 {
 				break
 			}
-			j = j - 1
+			j--
 			prev = unpackCC(v[j])
 			if prev <= cc {
 				break

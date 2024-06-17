@@ -14,10 +14,13 @@ import "github.com/adraffy/ENSNormalize.go/ensip15"
 
 // panics on invalid names
 ensip15.Normalize("RaFFY🚴‍♂️.eTh") // "raffy🚴‍♂.eth"
-// same as: ensip15.Shared().Normalize(...)
 
 // works like Normalize()
 ensip15.Beautify("1⃣2⃣.eth"); // "1️⃣2️⃣.eth"
+
+// the above functions both use a singleton
+ens := ensip15.New() // or ensip15.Shared()
+norm, err := ens.Normalize("a_") // uses error instead
 ```
 
 ### Error Handling

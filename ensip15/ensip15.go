@@ -164,7 +164,7 @@ func (l *ENSIP15) Beautify(name string) (string, error) {
 			cps := FlattenTokens(tokens)
 			g, err := l.checkValidLabel(cps, tokens)
 			if err != nil {
-				return "", nil
+				return "", err
 			}
 			if g != l._GREEK {
 				for i, x := range cps {

@@ -13,6 +13,9 @@ func (l *ENSIP15) ShouldEscape() util.RuneSet {
 func (l *ENSIP15) Ignored() util.RuneSet {
 	return l.ignored
 }
+func (l *ENSIP15) GetMapped(cp rune) []rune { // TODO: expose this map
+	return l.mapped[cp]
+}
 
 func (l *ENSIP15) Groups() (v []*Group) {
 	return slices.Clone(l.groups)
