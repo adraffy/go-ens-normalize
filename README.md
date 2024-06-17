@@ -18,9 +18,17 @@ ensip15.Normalize("RaFFY🚴‍♂️.eTh") // "raffy🚴‍♂.eth"
 // works like Normalize()
 ensip15.Beautify("1⃣2⃣.eth"); // "1️⃣2️⃣.eth"
 
-// the above functions both use a singleton
-ens := ensip15.New() // or ensip15.Shared()
-norm, err := ens.Normalize("a_") // uses error instead
+// returns "", err on invalid names
+norm, err := ens.Normalize("a_") // see below
+```
+
+#### Singleton
+```go
+ens := ensip15.Shared() // singleton
+ens := ensip15.New() // new instance
+
+nf := ensip15.Shared().NF() // singleton
+nf := nf.New() // new instance
 ```
 
 ### Error Handling
@@ -49,12 +57,6 @@ ensip15.Shared().SafeImplode([]rune{0x303, 0xFE0F}) // "◌̃{FE0F}"
 ### Unicode Normalization Forms
 
 ```go
-// use shared instance
-nf := ensip15.Shared().NF()
-nf.NFC([]rune{0x65, 0x300}) // [0xE8]
-nf.NFD([]rune{0xE8})        // [0x65, 0x300]
-
-// create new instance
-import "github.com/adraffy/ENSNormalize.go/nf"
-nf := nf.New() 
+ensip15.Shared().NF().NFC([]rune{0x65, 0x300}) // [0xE8]
+ensip15.Shared().NF().NFD([]rune{0xE8})        // [0x65, 0x300]
 ```
