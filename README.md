@@ -7,11 +7,11 @@
 * Passes **100%** [ENSIP-15 Validation Tests](./ensip15/ensip15_test.go)
 * Passes **100%** [Unicode Normalization Tests](./nf/nf_test.go)
 
+> `$ go get github.com/adraffy/ENSNormalize.go@v0.0.1`
+
 ### Primary API
 
 ```go
-import "github.com/adraffy/ENSNormalize.go/ensip15"
-
 // panics on invalid names
 ensip15.Normalize("RaFFY🚴‍♂️.eTh") // "raffy🚴‍♂.eth"
 
