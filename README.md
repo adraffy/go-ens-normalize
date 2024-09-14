@@ -1,13 +1,13 @@
-# ENSNormalize.go
-0-dependancy [ENSIP-15](https://docs.ens.domains/ensip/15) in Go
+# go-ens-normalize
+0-dependancy [ENSIP-15](https://docs.ens.domains/ensip/15) in C# 
 
 * Reference Implementation: [adraffy/ens-normalize.js](https://github.com/adraffy/ens-normalize.js)
-	* Unicode: `15.1.0`
-	* Spec Hash: [`1f6d3bdb7a724fe3b91f6d73ab14defcb719e0f4ab79022089c940e7e9c56b9c`](https://raw.githubusercontent.com/adraffy/ens-normalize.js/main/derive/output/spec.json)
+	* Unicode: `16.0.0`
+	* Spec Hash: [`4b3c5210a328d7097500b413bf075ec210bbac045cd804deae5d1ed771304825`](https://github.com/adraffy/ens-normalize.js/blob/main/derive/output/spec.json)
 * Passes **100%** [ENSIP-15 Validation Tests](./ensip15/ensip15_test.go)
 * Passes **100%** [Unicode Normalization Tests](./nf/nf_test.go)
 
-> `$ go get github.com/adraffy/ENSNormalize.go@v0.0.1`
+> `go get github.com/adraffy/go-ens-normalize@v0.1.0`
 
 ### Primary API
 
@@ -60,3 +60,9 @@ ensip15.Shared().SafeImplode([]rune{0x303, 0xFE0F}) // "◌̃{FE0F}"
 ensip15.Shared().NF().NFC([]rune{0x65, 0x300}) // [0xE8]
 ensip15.Shared().NF().NFD([]rune{0xE8})        // [0x65, 0x300]
 ```
+
+
+## Build
+
+1. [Sync and Compress](./compress/)
+1. `go test ./...`

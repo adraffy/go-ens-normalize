@@ -1,6 +1,6 @@
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
-import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {readFileSync, writeFileSync} from 'node:fs';
 import {Encoder} from './Encoder.js';
 import {Magic} from './Magic.js';
 import {
@@ -10,7 +10,6 @@ import {
 
 const BASE_DIR = fileURLToPath(new URL('.', import.meta.url));
 const DATA_DIR = join(BASE_DIR, 'data');
-const RESOURCES_DIR = join(BASE_DIR, '../resources/');
 
 const NF = JSON.parse(readFileSync(join(DATA_DIR, 'nf.json')));
 const SPEC = JSON.parse(readFileSync(join(DATA_DIR, 'spec.json')));
@@ -96,9 +95,8 @@ function align_buf(buf, align) {
 	return buf;
 }
 
-mkdirSync(RESOURCES_DIR);
-writeFileSync(join(RESOURCES_DIR, 'nf.bin'),   bytes_nf);
-writeFileSync(join(RESOURCES_DIR, 'spec.bin'), bytes_spec);
+writeFileSync(join(BASE_DIR, '../nf/nf.bin'),   bytes_nf);
+writeFileSync(join(BASE_DIR, '../ensip15/spec.bin'), bytes_spec);
 
 const r1 = Magic.reader_from_bytes(bytes_nf);
 console.log(read_str(r1));

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/adraffy/ENSNormalize.go/util"
+	"github.com/adraffy/go-ens-normalize/util"
 )
 
 type Whole struct {

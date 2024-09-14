@@ -3,7 +3,7 @@ package nf
 import (
 	_ "embed"
 
-	"github.com/adraffy/ENSNormalize.go/util"
+	"github.com/adraffy/go-ens-normalize/util"
 )
 
 //go:embed nf.bin
