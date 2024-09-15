@@ -1,25 +1,26 @@
 # go-ens-normalize
-0-dependancy [ENSIP-15](https://docs.ens.domains/ensip/15) in C# 
+0-dependancy [ENSIP-15](https://docs.ens.domains/ensip/15) in Go
 
-* Reference Implementation: [adraffy/ens-normalize.js](https://github.com/adraffy/ens-normalize.js)
+* 🏛️ Reference Implementation: [adraffy/ens-normalize.js](https://github.com/adraffy/ens-normalize.js)
 	* Unicode: `16.0.0`
 	* Spec Hash: [`4b3c5210a328d7097500b413bf075ec210bbac045cd804deae5d1ed771304825`](https://github.com/adraffy/ens-normalize.js/blob/main/derive/output/spec.json)
-* Passes **100%** [ENSIP-15 Validation Tests](./ensip15/ensip15_test.go)
-* Passes **100%** [Unicode Normalization Tests](./nf/nf_test.go)
+* ✅️ Passes **100%** [ENSIP-15 Validation Tests](./ensip15/ensip15_test.go)
+* ✅️ Passes **100%** [Unicode Normalization Tests](./nf/nf_test.go)
 
 > `go get github.com/adraffy/go-ens-normalize@v0.1.0`
 
 ### Primary API
 
 ```go
-// panics on invalid names
+// global functions will panic on invalid names
 ensip15.Normalize("RaFFY🚴‍♂️.eTh") // "raffy🚴‍♂.eth"
 
 // works like Normalize()
 ensip15.Beautify("1⃣2⃣.eth"); // "1️⃣2️⃣.eth"
 
-// returns "", err on invalid names
-norm, err := ens.Normalize("a_") // see below
+// member functions return ("", err) on invalid names
+ens := ensip15.Shared()
+norm, err := ens.Normalize("a_")
 ```
 
 #### Singleton
@@ -60,7 +61,6 @@ ensip15.Shared().SafeImplode([]rune{0x303, 0xFE0F}) // "◌̃{FE0F}"
 ensip15.Shared().NF().NFC([]rune{0x65, 0x300}) // [0xE8]
 ensip15.Shared().NF().NFD([]rune{0xE8})        // [0x65, 0x300]
 ```
-
 
 ## Build
 
