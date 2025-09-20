@@ -2,12 +2,12 @@
 0-dependancy [ENSIP-15](https://docs.ens.domains/ensip/15) in Go
 
 * 🏛️ Reference Implementation: [adraffy/ens-normalize.js](https://github.com/adraffy/ens-normalize.js)
-	* Unicode: `16.0.0`
-	* Spec Hash: [`4b3c5210a328d7097500b413bf075ec210bbac045cd804deae5d1ed771304825`](https://github.com/adraffy/ens-normalize.js/blob/main/derive/output/spec.json)
+	* Unicode: `17.0.0`
+	* Spec Hash: [`4febc8f5d285cbf80d2320fb0c1777ac25e378eb72910c34ec963d0a4e319c84`](https://github.com/adraffy/ens-normalize.js/blob/main/derive/output/spec.json)
 * ✅️ Passes **100%** [ENSIP-15 Validation Tests](./ensip15/ensip15_test.go)
 * ✅️ Passes **100%** [Unicode Normalization Tests](./nf/nf_test.go)
 
-> `go get github.com/adraffy/go-ens-normalize@v0.1.0`
+`go get github.com/adraffy/go-ens-normalize@v0.1.1`
 
 ### Primary API
 
